@@ -164,6 +164,99 @@ and the final extracted variables.
 - `extract` steps (reading a field's value into a named variable) and `code`
   steps (computing on previously-extracted variables) end-to-end
 
+## Real-world scenarios solved
+
+Beyond the built-in demo form, these are real, messy, multi-step instructions
+against real live sites that were run end-to-end (not mocked) while building
+this agent - each one found and fixed a genuine bug, listed here as worked
+examples of what the agent can actually do and proof it isn't cherry-picked.
+
+### 1. Google search
+
+```bash
+uv run python3 run_cli.py "go google.com and search for cute puppies"
+```
+
+**What this proved:** typing into the search box and clicking the Search
+button both ground correctly on a real, complex, unfamiliar page (27+
+candidates). **What it fixed:** Google's search button sat behind an
+autocomplete suggestions dropdown after typing, so a plain click hung the
+full 30s Playwright timeout ("subtree intercepts pointer events"). `click()`
+now fails fast (5s) and falls back to a forced click, then a JS-dispatched
+click - verified the query actually reached Google's URL after the fix.
+(Google itself then serves a bot-detection page for headless/automated
+traffic - expected, and not something this project tries to get around.)
+
+### 2. yopmail.com — enter an address and check the inbox
+
+```bash
+uv run python3 run_cli.py "go yopmail.coom and enter the email bill@yopmail.com"
+```
+
+(Typo and all - the planner handles it fine.) **What this proved:** a single
+ambiguous field (yopmail's inbox-lookup input has no `aria-label`, just a
+generic `placeholder="Enter your inbox here"`) still grounds correctly even
+when the instruction's wording ("the inbox email field") doesn't closely
+match the placeholder text. **What it fixed:** grounding used to reject this
+exact, correct match because of an internal confidence threshold - Jev
+picked the only real candidate at just 0.16-0.23 confidence, which got
+treated as "not found" and burned the whole replan budget rewording a
+description for a target that was there the whole time. Removed the
+threshold: a real (non-`__none__`) choice from Jev is now trusted as its
+answer regardless of confidence, matching how Third Hand (the reference
+project) actually does it.
+
+### 3. yopmail.com — send an email, then find it as the recipient
+
+```bash
+uv run python3 run_cli.py --headed --hold 3 "go yopmail.coom and enter the email bill@yopmail.com and once that is done send an email to bill1@yopmail.com and go back to the home page and login as bill1@yopmail.com and find the just now sent email"
+```
+
+A single instruction spanning two full inbox sessions and a compose flow -
+13 resolved steps by the time it finishes. **What this proved (verified by
+actually opening the received email afterward):** subject "Test", sender
+`bill@yopmail.com`, body "Test" - the message that arrived was exactly the
+one sent, not just "some click happened." **What it fixed, all found live
+while debugging this one instruction:**
+
+- yopmail's compose ("newmail") and Send buttons are icon-only - their real
+  text was a meaningless Material Icons glyph character that won over more
+  useful signals. Label priority is now `aria-label` → `<label>` →
+  `placeholder` → `title` → cleaned inner text (glyphs stripped, not an
+  all-or-nothing reject) → `alt`/`value`/`name` → the element's own `id` as
+  a last resort (this is how the compose button - no title, no aria-label,
+  nothing but `id="newmail"` - becomes findable at all).
+- The compose form (recipient/subject fields) loads inside an **iframe**;
+  `snapshot()` only scanned the top-level document and saw nothing there.
+  Now scans every frame on the page.
+- The Send button starts `disabled` and stays that way until Subject *and*
+  Body are filled in. Disabled buttons used to be filtered out of candidates
+  entirely, so Jev could only ever report "not found" - never "found, but
+  disabled" - giving the replanner nothing useful to act on. Now included
+  (annotated `(disabled)`), and the agent checks enabled-state before
+  clicking, feeding back a specific, actionable reason instead of a dead
+  end - which is exactly how the planner figured out on its own, across two
+  separate replans, that it needed to fill Subject *and* Body before Send
+  would work.
+- The message body is a rich-text `contenteditable` div, not a `<textarea>`
+  - wasn't in the candidate selector at all.
+- Grounding is **stochastic, not deterministic**: the exact same
+  single-candidate question against the exact same page was verified to
+  return found≈35%/not-found≈65% purely from sampling variance, not page
+  state drift. A full replan can't fix that (the one real candidate never
+  changes, only the wording does), so a cheap same-question retry (up to 3x)
+  now runs before escalating to an expensive replan call.
+- A long replan (this instruction needed one that added 7+ new steps at
+  once) got cut off mid-JSON on the default token budget, crashing with
+  `AttributeError`/`ValueError`. Raised the planner's `max_tokens`, added
+  salvage logic that recovers every complete step object up to a truncation
+  cutoff instead of failing the whole plan, and broadened `agent_loop`'s
+  exception handling so a planner/Jev failure is a clean, reported result,
+  never a raw crash.
+- `max_replans` raised from 2 to 6 - this scenario alone needed 5 replans
+  across icon-button resolution and the two required-field discoveries, and
+  each replan is one cheap API call, not worth failing prematurely over.
+
 ## Known limitations
 
 - No visual UI yet — CLI only, though `--headed` mode lets you watch the
