@@ -1,12 +1,20 @@
 # Jev Browser Agent
 
-<video src="demo/screencast.webm" controls autoplay loop muted width="100%">
-  Your browser doesn't support inline video - <a href="demo/screencast.webm">download the screencast</a> directly.
+<video src="https://github.com/jagadeeswara-reddy-p/browser-agent/releases/download/demo-media/screencast.webm" controls autoplay loop muted width="100%">
+  Your browser doesn't support inline video - <a href="https://github.com/jagadeeswara-reddy-p/browser-agent/releases/download/demo-media/screencast.webm">download the screencast</a> directly.
 </video>
 
-> Note: GitHub's README sanitizer generally strips `autoplay` for accessibility/UX
-> reasons, so this will most likely render as a normal playable video (click to
-> play) rather than actually autoplaying when someone opens the README.
+> Notes:
+> - GitHub only renders `<video>` tags inline when `src` points to their own
+>   attachment CDN or a Release asset URL (like above) - a relative path to a
+>   file committed in the repo gets stripped by their README sanitizer and
+>   won't play. The video is hosted as a [GitHub Release asset](https://github.com/jagadeeswara-reddy-p/browser-agent/releases/tag/demo-media)
+>   for that reason.
+> - This repo is private, so the video will only load for accounts with
+>   access, viewed while logged in on github.com.
+> - GitHub's sanitizer also generally strips `autoplay`, so this will most
+>   likely render as a normal playable video (click to play) rather than
+>   actually autoplaying.
 
 A proof of concept for an AI-driven browser automation agent: give it a
 sequence of steps in plain English, and it understands, plans, and executes
