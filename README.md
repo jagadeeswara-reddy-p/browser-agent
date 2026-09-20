@@ -168,10 +168,17 @@ and the final extracted variables.
 
 - No visual UI yet — CLI only, though `--headed` mode lets you watch the
   actual browser.
-- Grounding is text-only: elements with no accessible label/role and no
-  visible text (icon-only controls without `aria-label`) won't be found.
-  There's no OCR/vision fallback in this POC.
-- The planner's replan budget is capped (`max_replans`, default 2) to avoid
+- Grounding is text-only, no OCR/vision fallback: an icon-only control with
+  no `aria-label`, `title`, `placeholder`, meaningful text, or usable `id`
+  genuinely can't be identified. (Icon-font glyph text, iframes, disabled
+  buttons, and contenteditable rich-text fields are all handled - see
+  `browser_bridge.py`'s label-priority logic and frame-scanning `snapshot()`.)
+- Grounding is stochastic, not deterministic: a genuinely close call (weak
+  wording match, single ambiguous candidate) can flip between found/not-found
+  across identical calls. There's a cheap same-question retry for the
+  single-candidate case, but this is inherent to using a probabilistic model
+  for the decision, not something a code fix eliminates entirely.
+- The planner's replan budget is capped (`max_replans`, default 6) to avoid
   infinite loops on a truly broken page/instruction.
 - `code` steps run in a restricted `exec()` scope (no imports, no I/O) — this
   is a POC-level safeguard, not a hardened sandbox.
