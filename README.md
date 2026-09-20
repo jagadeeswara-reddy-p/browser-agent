@@ -118,10 +118,6 @@ uv run python3 run_cli.py --headed --slowmo 300 --pause 1.5
 
 # Watch your own instruction, slowed down
 uv run python3 run_cli.py --headed --slowmo 300 --pause 1.5 "your instruction here"
-
-# Record a video of the run (works headless or headed) into ./recordings/
-uv run python3 run_cli.py --record
-uv run python3 run_cli.py --headed --slowmo 300 --record ./demo-videos
 ```
 
 Flags:
@@ -130,11 +126,6 @@ Flags:
   action, so clicks/typing are visible instead of instant
 - `--pause SECS` — pauses after each agent step completes, so you have time
   to read the console log alongside the browser
-- `--record [DIR]` — records a `.webm` video of exactly the browser viewport
-  (default dir: `./recordings`). Uses Playwright's built-in per-context video
-  recording, so it works the same whether the browser is headed or headless,
-  and needs no OS-level screen-capture permissions. The saved path is printed
-  at the end of the run.
 
 The CLI prints every event as it happens: the decomposed plan, each Jev
 grounding decision (candidate chosen, confidence, latency), replans if any,

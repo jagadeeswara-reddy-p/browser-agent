@@ -16,18 +16,15 @@ class AgentError(Exception):
 
 class AgentRun:
     def __init__(self, instruction: str, headless: bool = True, on_event=None,
-                 max_replans: int = 2, slow_mo: int = 0, pause_after_step: float = 0.0,
-                 record_video_dir: str | None = None):
+                 max_replans: int = 2, slow_mo: int = 0, pause_after_step: float = 0.0):
         self.instruction = instruction
         self.headless = headless
         self.slow_mo = slow_mo
         self.pause_after_step = pause_after_step
-        self.record_video_dir = record_video_dir
         self.on_event = on_event or (lambda event: None)
         self.max_replans = max_replans
         self.variables: dict[str, str] = {}
         self.completed_steps: list[dict] = []
-        self.video_path: str | None = None
 
     async def emit(self, event_type: str, **payload):
         result = self.on_event({"type": event_type, **payload})
@@ -44,8 +41,7 @@ class AgentRun:
         jev = JevClient()
         planner = PlannerClient()
         try:
-            await browser.start(headless=self.headless, slow_mo=self.slow_mo,
-                                 record_video_dir=self.record_video_dir)
+            await browser.start(headless=self.headless, slow_mo=self.slow_mo)
 
             await self.emit("planning_start", instruction=self.instruction)
             plan_result = await planner.decompose(self.instruction)
@@ -137,9 +133,7 @@ class AgentRun:
         finally:
             await jev.close()
             await planner.close()
-            self.video_path = await browser.close()
-            if self.video_path:
-                await self.emit("video_saved", path=self.video_path)
+            await browser.close()
 
     async def _run_code_step(self, step: dict) -> dict:
         """Sandboxed-ish exec for pure-computation steps. No filesystem/network
