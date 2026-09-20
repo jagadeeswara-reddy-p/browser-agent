@@ -126,6 +126,11 @@ Flags:
   action, so clicks/typing are visible instead of instant
 - `--pause SECS` — pauses after each agent step completes, so you have time
   to read the console log alongside the browser
+- `--hold SECS` — keeps the browser open for this long after the run finishes
+  (success or failure) before closing, so you can actually check the final
+  page state (e.g. that a form really submitted) instead of the window
+  vanishing the instant the last step completes. Defaults to 5s in `--headed`
+  mode; ignored (treated as 0) when headless, since there's nothing to look at.
 
 The CLI prints every event as it happens: the decomposed plan, each Jev
 grounding decision (candidate chosen, confidence, latency), replans if any,

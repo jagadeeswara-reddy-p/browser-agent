@@ -16,11 +16,13 @@ class AgentError(Exception):
 
 class AgentRun:
     def __init__(self, instruction: str, headless: bool = True, on_event=None,
-                 max_replans: int = 2, slow_mo: int = 0, pause_after_step: float = 0.0):
+                 max_replans: int = 2, slow_mo: int = 0, pause_after_step: float = 0.0,
+                 hold_before_close: float = 0.0):
         self.instruction = instruction
         self.headless = headless
         self.slow_mo = slow_mo
         self.pause_after_step = pause_after_step
+        self.hold_before_close = hold_before_close
         self.on_event = on_event or (lambda event: None)
         self.max_replans = max_replans
         self.variables: dict[str, str] = {}
@@ -131,6 +133,9 @@ class AgentRun:
             await self.emit("run_failed", message=str(e))
             return {"success": False, "error": str(e)}
         finally:
+            if self.hold_before_close:
+                await self.emit("holding", seconds=self.hold_before_close)
+                await asyncio.sleep(self.hold_before_close)
             await jev.close()
             await planner.close()
             await browser.close()

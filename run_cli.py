@@ -41,6 +41,8 @@ def on_event(event):
         print(f"\n[COMPLETE] variables={event['variables']}")
     elif t == "run_failed":
         print(f"\n[FAILED] {event['message']}")
+    elif t == "holding":
+        print(f"\n[HOLD] keeping browser open for {event['seconds']}s so you can check the final page state...")
 
 
 DEFAULT_INSTRUCTION = (
@@ -58,6 +60,9 @@ async def main():
     parser.add_argument("--headed", action="store_true", help="show a visible browser window")
     parser.add_argument("--slowmo", type=int, default=0, help="ms of artificial delay per Playwright action (for --headed)")
     parser.add_argument("--pause", type=float, default=0.0, help="seconds to pause after each agent step (for --headed)")
+    parser.add_argument("--hold", type=float, default=5.0,
+                         help="seconds to keep the browser open after the run finishes (success or failure), "
+                              "so you can check the final page state before it closes. Default 5s; use 0 to disable.")
     args = parser.parse_args()
 
     instruction = " ".join(args.instruction) or DEFAULT_INSTRUCTION
@@ -67,6 +72,7 @@ async def main():
         on_event=on_event,
         slow_mo=args.slowmo,
         pause_after_step=args.pause,
+        hold_before_close=args.hold if args.headed else 0.0,
     )
     result = await run.run()
     print("\n---")
