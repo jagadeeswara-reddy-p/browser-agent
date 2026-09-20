@@ -51,14 +51,28 @@ class PlannerClient:
         resp = await self._client.post(
             f"{self.base_url}/chat/completions",
             headers={"x-api-key": self.api_key, "Content-Type": "application/json"},
-            json={"model": self.model, "messages": messages},
+            # Explicit budget: seen live without this, a replan needing many
+            # steps got cut off mid-JSON (finish_reason "length") after the
+            # model's reasoning_content ate most of the default budget.
+            json={"model": self.model, "messages": messages, "max_tokens": 4000},
         )
         if resp.status_code != 200:
             raise PlannerError(f"HTTP {resp.status_code}: {resp.text}")
         data = resp.json()
+        choice = data["choices"][0]
+        content = choice["message"]["content"]
+        if content is None:
+            # Seen live: the model can burn its whole completion budget on
+            # `reasoning_content` and return no final answer at all (usually
+            # finish_reason "length"). Surface this clearly instead of
+            # crashing downstream with an opaque AttributeError.
+            raise PlannerError(
+                f"Planner returned no content (finish_reason={choice.get('finish_reason')!r}). "
+                f"reasoning_content: {(choice['message'].get('reasoning_content') or '')[:300]!r}"
+            )
         return {
-            "content": data["choices"][0]["message"]["content"],
-            "reasoning": data["choices"][0]["message"].get("reasoning_content"),
+            "content": content,
+            "reasoning": choice["message"].get("reasoning_content"),
             "usage": data.get("usage", {}),
             "raw_request": {"model": self.model, "messages": messages},
             "raw_response": data,
@@ -71,10 +85,45 @@ class PlannerClient:
         if fence:
             text = fence.group(1)
         start = text.find("[")
-        end = text.rfind("]")
-        if start == -1 or end == -1:
+        if start == -1:
             raise PlannerError(f"No JSON array found in planner output: {text[:300]}")
-        return json.loads(text[start:end + 1])
+        end = text.rfind("]")
+        if end != -1:
+            try:
+                return json.loads(text[start:end + 1])
+            except json.JSONDecodeError:
+                pass  # fall through to truncation salvage below
+        # No closing `]` (or what's there doesn't parse) - the response was
+        # cut off mid-generation (seen live: finish_reason "length" on a
+        # long multi-step replan). Salvage every complete step object up to
+        # the cutoff instead of failing the whole run over a shortfall of a
+        # few trailing steps - a partial-but-real plan beats no plan.
+        depth = 0
+        last_complete_end = None
+        in_string = False
+        escape = False
+        for idx in range(start, len(text)):
+            ch = text[idx]
+            if in_string:
+                if escape:
+                    escape = False
+                elif ch == "\\":
+                    escape = True
+                elif ch == '"':
+                    in_string = False
+                continue
+            if ch == '"':
+                in_string = True
+            elif ch == "{":
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+                if depth == 0:
+                    last_complete_end = idx
+        if last_complete_end is None:
+            raise PlannerError(f"Planner output truncated before any complete step: {text[:300]}")
+        salvaged = text[start:last_complete_end + 1] + "]"
+        return json.loads(salvaged)
 
     async def decompose(self, instruction: str) -> dict:
         """Turn a natural-language instruction into a step list. Returns dict with

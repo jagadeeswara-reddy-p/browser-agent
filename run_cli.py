@@ -29,6 +29,10 @@ def on_event(event):
         status = "FOUND" if event["found"] else "NOT FOUND"
         print(f"   [JEV] {status} cand={log['choice']} conf={log['confidence']:.2f} "
               f"({log['num_candidates']} candidates, {log['latency_ms']:.0f}ms)")
+    elif t == "grounding_retry":
+        log = event["log"]
+        status = "FOUND" if event["found"] else "still not found"
+        print(f"   [JEV RETRY] single-candidate re-ask -> {status} (cand={log['choice']} conf={log['confidence']:.2f})")
     elif t == "replanning":
         print(f"   [REPLAN] {event['reason']}")
     elif t == "replan_ready":
