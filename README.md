@@ -1,5 +1,13 @@
 # Jev Browser Agent
 
+<video src="demo/screencast.webm" controls autoplay loop muted width="100%">
+  Your browser doesn't support inline video - <a href="demo/screencast.webm">download the screencast</a> directly.
+</video>
+
+> Note: GitHub's README sanitizer generally strips `autoplay` for accessibility/UX
+> reasons, so this will most likely render as a normal playable video (click to
+> play) rather than actually autoplaying when someone opens the README.
+
 A proof of concept for an AI-driven browser automation agent: give it a
 sequence of steps in plain English, and it understands, plans, and executes
 them in a real browser — navigating, clicking, typing, extracting data, and
