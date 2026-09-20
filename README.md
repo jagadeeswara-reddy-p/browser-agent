@@ -1,20 +1,21 @@
 # Jev Browser Agent
 
-<video src="https://github.com/jagadeeswara-reddy-p/browser-agent/releases/download/demo-media/screencast.webm" controls autoplay loop muted width="100%">
-  Your browser doesn't support inline video - <a href="https://github.com/jagadeeswara-reddy-p/browser-agent/releases/download/demo-media/screencast.webm">download the screencast</a> directly.
-</video>
+![Demo: the agent filling and submitting a form](demo/screencast.gif)
+
+[Watch the full-quality video instead](https://github.com/jagadeeswara-reddy-p/browser-agent/releases/download/demo-media/screencast.webm)
 
 > Notes:
-> - GitHub only renders `<video>` tags inline when `src` points to their own
->   attachment CDN or a Release asset URL (like above) - a relative path to a
->   file committed in the repo gets stripped by their README sanitizer and
->   won't play. The video is hosted as a [GitHub Release asset](https://github.com/jagadeeswara-reddy-p/browser-agent/releases/tag/demo-media)
->   for that reason.
-> - This repo is private, so the video will only load for accounts with
->   access, viewed while logged in on github.com.
-> - GitHub's sanitizer also generally strips `autoplay`, so this will most
->   likely render as a normal playable video (click to play) rather than
->   actually autoplaying.
+> - The GIF above is a downscaled (880px wide, 12fps) copy of the same
+>   screencast, committed directly to the repo at `demo/screencast.gif` and
+>   referenced by a plain relative path - unlike `<video>`, GitHub renders
+>   markdown images from a repo-relative path just fine, so this one actually
+>   autoplays inline with no click needed.
+> - The linked `.webm` is the original full-resolution, full-quality
+>   recording, hosted as a [GitHub Release asset](https://github.com/jagadeeswara-reddy-p/browser-agent/releases/tag/demo-media)
+>   (a relative path wouldn't render `<video>` inline - GitHub only does that
+>   for their own attachment CDN or a Release asset URL).
+> - This repo is private, so both will only load for accounts with access,
+>   viewed while logged in on github.com.
 
 A proof of concept for an AI-driven browser automation agent: give it a
 sequence of steps in plain English, and it understands, plans, and executes
