@@ -4,7 +4,6 @@ the target isn't on screen instead of being forced to pick something wrong."""
 import json
 
 NONE_KEY = "__none__"
-CONFIDENCE_THRESHOLD = 0.55
 
 
 class GroundingResult:
@@ -58,7 +57,12 @@ async def ground_target(client, candidates: dict, target_description: str, page_
 
     if choice == NONE_KEY or choice not in candidates:
         return GroundingResult(False, None, confidence, probabilities, log)
-    if confidence < CONFIDENCE_THRESHOLD:
-        log["note"] = f"confidence {confidence} below threshold {CONFIDENCE_THRESHOLD}; treating as not found"
-        return GroundingResult(False, None, confidence, probabilities, log)
+    # Trust Jev's explicit choice as-is (Third Hand's own pattern): the
+    # `__none__` option above is how it says "not found" - a real, non-none
+    # choice IS its answer, regardless of confidence. A low score here often
+    # just means the target_description used different words than the
+    # element's actual label (e.g. "the inbox field" vs "Enter your inbox
+    # here"), not that the match is wrong. Rejecting on confidence caused a
+    # real bug: a correct single-candidate match got treated as "not found"
+    # and burned the whole replan budget on a target that was there all along.
     return GroundingResult(True, choice, confidence, probabilities, log)
