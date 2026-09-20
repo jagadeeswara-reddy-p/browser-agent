@@ -49,21 +49,40 @@ class BrowserSession:
     def __init__(self):
         self._pw = None
         self.browser = None
+        self.context = None
         self.page = None
         self._candidate_map: dict[str, object] = {}
+        self._video_path = None
 
-    async def start(self, headless: bool = True, slow_mo: int = 0):
+    async def start(self, headless: bool = True, slow_mo: int = 0, record_video_dir: str | None = None):
         self._pw = await async_playwright().start()
         self.browser = await self._pw.chromium.launch(headless=headless, slow_mo=slow_mo)
-        self.page = await self.browser.new_page()
-        if not headless:
-            await self.page.set_viewport_size({"width": 1280, "height": 900})
+        viewport = {"width": 1280, "height": 900}
+        context_kwargs = {"viewport": viewport}
+        if record_video_dir:
+            # Playwright records at this exact resolution regardless of the
+            # actual window size, so pin viewport == recording size.
+            context_kwargs["record_video_dir"] = record_video_dir
+            context_kwargs["record_video_size"] = viewport
+        self.context = await self.browser.new_context(**context_kwargs)
+        self.page = await self.context.new_page()
 
-    async def close(self):
+    async def close(self) -> str | None:
+        """Closes the session. Returns the recorded video's file path, if any
+        (only resolvable once the page/context has actually closed)."""
+        if self.page and self.page.video:
+            try:
+                await self.page.close()
+                self._video_path = await self.page.video.path()
+            except Exception:
+                pass
+        if self.context:
+            await self.context.close()
         if self.browser:
             await self.browser.close()
         if self._pw:
             await self._pw.stop()
+        return self._video_path
 
     async def navigate(self, url: str):
         await self.page.goto(url, wait_until="load")

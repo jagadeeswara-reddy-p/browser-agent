@@ -7,6 +7,7 @@ Usage:
 import argparse
 import asyncio
 import json
+import os
 
 import env_loader
 env_loader.load_all()
@@ -41,6 +42,8 @@ def on_event(event):
         print(f"\n[COMPLETE] variables={event['variables']}")
     elif t == "run_failed":
         print(f"\n[FAILED] {event['message']}")
+    elif t == "video_saved":
+        print(f"\n[VIDEO] saved to {event['path']}")
 
 
 DEFAULT_INSTRUCTION = (
@@ -58,19 +61,26 @@ async def main():
     parser.add_argument("--headed", action="store_true", help="show a visible browser window")
     parser.add_argument("--slowmo", type=int, default=0, help="ms of artificial delay per Playwright action (for --headed)")
     parser.add_argument("--pause", type=float, default=0.0, help="seconds to pause after each agent step (for --headed)")
+    parser.add_argument("--record", metavar="DIR", nargs="?", const="recordings",
+                         help="record a .webm video of the browser viewport into DIR (default: ./recordings)")
     args = parser.parse_args()
 
     instruction = " ".join(args.instruction) or DEFAULT_INSTRUCTION
+    if args.record:
+        os.makedirs(args.record, exist_ok=True)
     run = AgentRun(
         instruction,
         headless=not args.headed,
         on_event=on_event,
         slow_mo=args.slowmo,
         pause_after_step=args.pause,
+        record_video_dir=args.record,
     )
     result = await run.run()
     print("\n---")
     print(json.dumps(result, indent=2))
+    if run.video_path:
+        print(f"\nVideo: {run.video_path}")
 
 
 if __name__ == "__main__":
